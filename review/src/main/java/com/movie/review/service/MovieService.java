@@ -73,6 +73,49 @@ public class MovieService {
         return movieIds.stream().distinct().limit(numberOfMovies).collect(Collectors.toList());
     }
 
+    public List<Integer> fetchMoviesByGenre(String apiKey, int genreId, int numberOfMovies, int recentMonths, int upcomingMonths, int pastYears) throws IOException {
+        Calendar calendar = Calendar.getInstance();
+
+        String startDate = "";
+        String endDate = "";
+        List<Integer> movieIds = new ArrayList<>();
+
+        for (int m = 1; m <= recentMonths; m++) {
+            calendar.add(Calendar.MONTH, -1);
+            endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            calendar.add(Calendar.MONTH, -1);
+            startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release_date.desc&page=1&with_genres=" + genreId + "&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
+        }
+
+        for (int m = 0; m < upcomingMonths; m++) {
+            calendar.add(Calendar.MONTH, 1);
+            startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            calendar.add(Calendar.MONTH, 1);
+            endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release_date.desc&page=1&with_genres=" + genreId + "&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
+        }
+
+        for (int y = 1; y <= pastYears; y++) {
+            calendar.add(Calendar.YEAR, -1);
+            endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            calendar.add(Calendar.YEAR, -1);
+            startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release_date.desc&page=1&with_genres=" + genreId + "&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
+        }
+
+        return movieIds.stream().distinct().limit(numberOfMovies).collect(Collectors.toList());
+    }
+
     private List<Integer> fetchMovieIdsFromUrl(String apiKey, String baseUrl, int limit) throws IOException {
         List<Integer> movieIds = new ArrayList<>();
         int currentPage = 1;
@@ -160,7 +203,8 @@ public class MovieService {
     }
 
     public void saveMovies(String apiKey, int numberOfMovies, int recentMonths, int upcomingMonths, int pastYears) throws IOException {
-        List<Integer> latestMovieIds = fetchLatestMovieIds(apiKey, numberOfMovies, recentMonths, upcomingMonths, pastYears);
+//        List<Integer> latestMovieIds = fetchLatestMovieIds(apiKey, numberOfMovies, recentMonths, upcomingMonths, pastYears);
+        List<Integer> latestMovieIds = fetchMoviesByGenre(apiKey, 80, numberOfMovies, recentMonths, upcomingMonths, pastYears);
 
         for (Integer movieId : latestMovieIds) {
             List<Movie> existingMovies = movieRepository.findByTmdbId(movieId);
