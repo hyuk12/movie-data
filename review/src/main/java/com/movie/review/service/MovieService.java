@@ -43,7 +43,8 @@ public class MovieService {
             calendar.add(Calendar.MONTH, -1);
             startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
 
-            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+//          String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
             movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
         }
 
@@ -54,7 +55,7 @@ public class MovieService {
             calendar.add(Calendar.MONTH, 1);
             endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
 
-            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
             movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
         }
 
@@ -65,7 +66,7 @@ public class MovieService {
             calendar.add(Calendar.YEAR, -1);
             startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
 
-            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=release.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
             movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
         }
 
