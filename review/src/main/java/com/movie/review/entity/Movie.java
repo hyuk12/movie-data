@@ -37,5 +37,5 @@ public class Movie {
     private String directors;
     private String backdropUrl;
     private Boolean adult;
-    private Long tmdbId;
+    private Integer tmdbId;
 }

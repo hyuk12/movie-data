@@ -18,11 +18,10 @@ public class MovieController {
     @GetMapping("/api/movies/fetch-and-save")
     public ResponseEntity<String> fetchAndSaveLatestMovies(
             @RequestParam("api_key") String apiKey,
-            @RequestParam(value = "number_of_movies", defaultValue = "15100") int numberOfMovies,
-            @RequestParam(value = "fetch_past_movies", defaultValue = "false") boolean fetchPastMovies
+            @RequestParam(value = "number_of_movies", defaultValue = "15000") int numberOfMovies
     ) {
         try {
-            movieService.saveMovies(apiKey, numberOfMovies,120, 1, fetchPastMovies);
+            movieService.saveMovies(apiKey, numberOfMovies,1, 1, 10);
             return new ResponseEntity<>("Successfully fetched and saved latest movies", HttpStatus.OK);
         } catch (IOException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

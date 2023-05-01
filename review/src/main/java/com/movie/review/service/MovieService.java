@@ -28,12 +28,13 @@ public class MovieService {
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
 
-    public List<Integer> fetchLatestMovieIds(String apiKey, int numberOfMovies, int recentMonths, int upcomingMonths) throws IOException {
+    public List<Integer> fetchLatestMovieIds(String apiKey, int numberOfMovies, int recentMonths, int upcomingMonths, int pastYears) throws IOException {
         Calendar calendar = Calendar.getInstance();
 
         String startDate = "";
         String endDate = "";
         List<Integer> movieIds = new ArrayList<>();
+        int limit = 100;
 
         for (int m = 1; m <= recentMonths; m++) {
             calendar.add(Calendar.MONTH, -1);
@@ -42,8 +43,8 @@ public class MovieService {
             calendar.add(Calendar.MONTH, -1);
             startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
 
-            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&page=1&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
-            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
         }
 
         for (int m = 0; m < upcomingMonths; m++) {
@@ -53,34 +54,54 @@ public class MovieService {
             calendar.add(Calendar.MONTH, 1);
             endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
 
-            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&page=1&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
-            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
+        }
+
+        for (int y = 1; y <= pastYears; y++) {
+            calendar.add(Calendar.YEAR, -1);
+            endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            calendar.add(Calendar.YEAR, -1);
+            startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
+
+            String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&primary_release_date.gte=" + startDate + "&primary_release_date.lte=" + endDate;
+            movieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, limit));
         }
 
         return movieIds.stream().distinct().limit(numberOfMovies).collect(Collectors.toList());
     }
 
-    private List<Integer> fetchMovieIdsFromUrl(String apiKey, String url, int limit) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("GET");
-        connection.connect();
-
-        if (connection.getResponseCode() != 200) {
-            throw new IOException("Failed to fetch movie list: " + connection.getResponseCode() + " " + connection.getResponseMessage());
-        }
-
-        String response = new BufferedReader(new InputStreamReader(connection.getInputStream()))
-                .lines().collect(Collectors.joining("\n"));
-
-        JsonObject json = JsonParser.parseString(response).getAsJsonObject();
-        JsonArray results = json.getAsJsonArray("results");
-
+    private List<Integer> fetchMovieIdsFromUrl(String apiKey, String baseUrl, int limit) throws IOException {
         List<Integer> movieIds = new ArrayList<>();
-        for (JsonElement result : results) {
-            movieIds.add(result.getAsJsonObject().get("id").getAsInt());
-        }
+        int currentPage = 1;
+        int totalPages = 1;
 
-        connection.disconnect();
+        while (movieIds.size() < limit && currentPage <= totalPages) {
+            String url = baseUrl + "&page=" + currentPage;
+
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+            connection.setRequestMethod("GET");
+            connection.connect();
+
+            if (connection.getResponseCode() != 200) {
+                throw new IOException("Failed to fetch movie list: " + connection.getResponseCode() + " " + connection.getResponseMessage());
+            }
+
+            String response = new BufferedReader(new InputStreamReader(connection.getInputStream()))
+                    .lines().collect(Collectors.joining("\n"));
+
+            JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+            JsonArray results = json.getAsJsonArray("results");
+            totalPages = json.get("total_pages").getAsInt();
+
+            for (JsonElement result : results) {
+                movieIds.add(result.getAsJsonObject().get("id").getAsInt());
+            }
+
+            connection.disconnect();
+            currentPage++;
+        }
 
         return movieIds.stream().limit(limit).collect(Collectors.toList());
     }
@@ -137,28 +158,20 @@ public class MovieService {
         return genres;
     }
 
-    public void saveMovies(String apiKey, int numberOfMovies, int recentMonths, int upcomingMonths, boolean fetchPastMovies) throws IOException {
-        List<Integer> latestMovieIds = fetchLatestMovieIds(apiKey, numberOfMovies, recentMonths, upcomingMonths);
-
-        if (fetchPastMovies) {
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.DAY_OF_MONTH, 1); // 월의 첫날로 설정
-            calendar.add(Calendar.MONTH, 1); // 다음달로 이동
-            for (int m = 1; m <= 120; m++) { // 10년 동안의 데이터를 가져옵니다.
-                String startDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
-
-                calendar.add(Calendar.MONTH, -1); // 이전 달로 이동
-                String endDate = new SimpleDateFormat("yyyy-MM-dd").format(calendar.getTime());
-
-                String url = "https://api.themoviedb.org/3/discover/movie?api_key=" + apiKey + "&language=ko-KR&sort_by=popularity.desc&page=1&primary_release_date.gte=" + endDate + "&primary_release_date.lte=" + startDate;
-                latestMovieIds.addAll(fetchMovieIdsFromUrl(apiKey, url, 100));
-            }
-        }
-
+    public void saveMovies(String apiKey, int numberOfMovies, int recentMonths, int upcomingMonths, int pastYears) throws IOException {
+        List<Integer> latestMovieIds = fetchLatestMovieIds(apiKey, numberOfMovies, recentMonths, upcomingMonths, pastYears);
 
         for (Integer movieId : latestMovieIds) {
+            List<Movie> existingMovies = movieRepository.findByTmdbId(movieId);
             MovieData movieData = fetchMovieData(apiKey, movieId);
             JsonObject movieCredits = fetchMovieCredits(apiKey, movieId);
+
+            Movie movie;
+            if (!existingMovies.isEmpty()) {
+                movie = existingMovies.get(0);
+            } else {
+                movie = new Movie();
+            }
 
             Set<Genre> movieGenres = new HashSet<>();
             for (Genre genre : movieData.getGenres()) {
@@ -171,13 +184,12 @@ public class MovieService {
             }
 
             // Save movie to the movie table
-            Movie movie = new Movie();
             movie.setTitle(movieData.getTitle());
             movie.setOverview(movieData.getOverview());
             movie.setPosterUrl(generatePosterUrl(movieData.getPosterPath(), "w500"));
             movie.setBackdropUrl(generatePosterUrl(movieData.getPosterPath(), "original"));
             movie.setReleaseDate(movieData.getReleaseDate());
-            movie.setTmdbId((long) movieData.getId());
+            movie.setTmdbId(movieData.getId());
             movie.setVoteAverage(movieData.getVoteAverage());
             movie.setAdult(movieData.isAdult());
             // Add other movie attributes here
@@ -201,13 +213,13 @@ public class MovieService {
                     .collect(Collectors.toList());
             movie.setDirectors(String.join(",", directors));
 
-
             // Get the actors and directors from the movie credits
 
             movie.setGenres(movieGenres);
             movieRepository.save(movie);
         }
     }
+
 
     private String generatePosterUrl(String posterPath, String imageSize) {
         String baseUrl = "https://image.tmdb.org/t/p/";
